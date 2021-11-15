@@ -16,7 +16,7 @@ export function isReserved (str: string): boolean {
 }
 
 /**
- * Define a property.
+ * Define a property. 定义一个属性，定义对象的属性
  */
 export function def (obj: Object, key: string, val: any, enumerable?: boolean) {
   Object.defineProperty(obj, key, {
