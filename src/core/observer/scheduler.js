@@ -157,9 +157,9 @@ function callActivatedHooks (queue) {
 }
 
 /**
- * Push a watcher into the watcher queue.
- * Jobs with duplicate IDs will be skipped unless it's
- * pushed when the queue is being flushed.
+ * Push a watcher into the watcher queue.   将观察者推入观察者对垒。
+ * Jobs with duplicate IDs will be skipped unless it's   具有重复IDs的作业将被跳过
+ * pushed when the queue is being flushed.    除非在刷新队列时将其推入
  */
 export function queueWatcher (watcher: Watcher) {
   const id = watcher.id

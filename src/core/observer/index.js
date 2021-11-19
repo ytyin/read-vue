@@ -148,7 +148,7 @@ export function defineReactive (
   customSetter?: ?Function,
   shallow?: boolean
 ) {
-  const dep = new Dep() // 依赖搜集实例
+  const dep = new Dep() // 依赖搜集实例 实例化一个依赖管理器，生成一个依赖管理器数组dep
 
   const property = Object.getOwnPropertyDescriptor(obj, key)
   if (property && property.configurable === false) {
@@ -169,7 +169,7 @@ export function defineReactive (
     get: function reactiveGetter () {
       const value = getter ? getter.call(obj) : val
       if (Dep.target) {
-        dep.depend()
+        dep.depend()  // 在getter中搜集依赖
         if (childOb) {
           childOb.dep.depend()
           if (Array.isArray(value)) {
@@ -197,7 +197,7 @@ export function defineReactive (
         val = newVal
       }
       childOb = !shallow && observe(newVal)
-      dep.notify()
+      dep.notify() // 在setter中通知依赖更新
     }
   })
 }
@@ -273,6 +273,7 @@ export function del (target: Array<any> | Object, key: any) {
 /**
  * Collect dependencies on array elements when the array is touched, since
  * we cannot intercept array element access like property getters.
+ * 由于我们不能像属性获取那样截取数组元素访问，因此在接触数组是搜集对数组元素的依赖关系
  */
 function dependArray (value: Array<any>) {
   for (let e, i = 0, l = value.length; i < l; i++) {

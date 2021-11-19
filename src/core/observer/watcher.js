@@ -20,9 +20,12 @@ import type { SimpleSet } from '../util/index'
 let uid = 0
 
 /**
- * A watcher parses an expression, collects dependencies,
- * and fires callback when the expression value changes.
- * This is used for both the $watch() api and directives.
+ * A watcher parses an expression, collects dependencies, 观察者依赖表达式，收集一览行，并
+ * and fires callback when the expression value changes.  在表达式值更改时触发回调。
+ * This is used for both the $watch() api and directives. 这用于$watch() api和指令
+ *
+ * 谁引入了数据，谁就是依赖，就为谁创建一个Watcher实例，在创建Watcher实例的过程中会自动把自己添加到这个数据对应的依赖管理器中，
+ * 以后这个Watcher实例就代表依赖，当数据发生变化时，我们就通知Watcher实例，由Watcher实例再去通知真正的依赖
  */
 export default class Watcher {
   vm: Component;
@@ -66,9 +69,9 @@ export default class Watcher {
       this.deep = this.user = this.lazy = this.sync = false
     }
     this.cb = cb
-    this.id = ++uid // uid for batching
+    this.id = ++uid // uid for batching  uid用于批处理
     this.active = true
-    this.dirty = this.lazy // for lazy watchers
+    this.dirty = this.lazy // for lazy watchers  dirdy是懒散的观察者
     this.deps = []
     this.newDeps = []
     this.depIds = new Set()
@@ -76,7 +79,7 @@ export default class Watcher {
     this.expression = process.env.NODE_ENV !== 'production'
       ? expOrFn.toString()
       : ''
-    // parse expression for getter
+    // parse expression for getter    getter的解析表达式
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
@@ -97,14 +100,14 @@ export default class Watcher {
   }
 
   /**
-   * Evaluate the getter, and re-collect dependencies.
+   * Evaluate the getter, and re-collect dependencies.  评估getter并重新收集依赖项
    */
   get () {
     pushTarget(this)
     let value
     const vm = this.vm
     try {
-      value = this.getter.call(vm, vm)
+      value = this.getter.call(vm, vm) // 获取一下被依赖的数据，目的是触发对应数据上面的getter,在getter里面会调用dep.depend()搜集依赖，
     } catch (e) {
       if (this.user) {
         handleError(e, vm, `getter for watcher "${this.expression}"`)
@@ -159,8 +162,8 @@ export default class Watcher {
   }
 
   /**
-   * Subscriber interface.
-   * Will be called when a dependency changes.
+   * Subscriber interface.   订阅接口
+   * Will be called when a dependency changes.  将在依赖项更改时调用
    */
   update () {
     /* istanbul ignore else */
@@ -174,16 +177,16 @@ export default class Watcher {
   }
 
   /**
-   * Scheduler job interface.
-   * Will be called by the scheduler.
+   * Scheduler job interface.  调度程序作业接口
+   * Will be called by the scheduler.  将由调度程序调用
    */
   run () {
     if (this.active) {
       const value = this.get()
       if (
         value !== this.value ||
-        // Deep watchers and watchers on Object/Arrays should fire even
-        // when the value is the same, because the value may
+        // Deep watchers and watchers on Object/Arrays should fire even  即使值相同，深度观察者和对象/数组上的观察者也应该触发
+        // when the value is the same, because the value may             因为值可能已经发生了变化
         // have mutated.
         isObject(value) ||
         this.deep
@@ -195,7 +198,7 @@ export default class Watcher {
           const info = `callback for watcher "${this.expression}"`
           invokeWithErrorHandling(this.cb, this.vm, [value, oldValue], this.vm, info)
         } else {
-          this.cb.call(this.vm, value, oldValue)
+          this.cb.call(this.vm, value, oldValue) // 数据变化时，我们不直接去通知依赖更新，可通知依赖对应的Watch实例，由Watch实例去通知真正的视图
         }
       }
     }

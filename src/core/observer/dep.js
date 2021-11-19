@@ -18,29 +18,29 @@ export default class Dep {
 
   constructor () {
     this.id = uid++
-    this.subs = []
+    this.subs = [] //初始化subs实例
   }
-
+  // 添加订阅
   addSub (sub: Watcher) {
     this.subs.push(sub)
   }
-
+  // 删除一个依赖
   removeSub (sub: Watcher) {
     remove(this.subs, sub)
   }
-
+  // 添加一个依赖
   depend () {
     if (Dep.target) {
       Dep.target.addDep(this)
     }
   }
-
+  // 通知所有依赖更新
   notify () {
-    // stabilize the subscriber list first
+    // stabilize the subscriber list first 首先稳定订阅者列表
     const subs = this.subs.slice()
     if (process.env.NODE_ENV !== 'production' && !config.async) {
-      // subs aren't sorted in scheduler if not running async
-      // we need to sort them now to make sure they fire in correct
+      // subs aren't sorted in scheduler if not running async 如果不运行async订阅者们subs不会在调度中排序
+      // we need to sort them now to make sure they fire in correct 我们现在需要对它们进行排序，以确保它们以正常的顺序启动
       // order
       subs.sort((a, b) => a.id - b.id)
     }
@@ -50,8 +50,8 @@ export default class Dep {
   }
 }
 
-// The current target watcher being evaluated.
-// This is globally unique because only one watcher
+// The current target watcher being evaluated. 正在评估的当前目标监测watcher
+// This is globally unique because only one watcher 这是全局唯一的，因为一次只能评估一个观察者
 // can be evaluated at a time.
 Dep.target = null
 const targetStack = []
