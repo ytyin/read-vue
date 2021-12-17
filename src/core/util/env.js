@@ -1,6 +1,6 @@
 /* @flow */
 
-// can we use __proto__? 是否能用使用__proto__?
+// can we use __proto__? 是否能用使用__proto__? 能力检测：判断__proto__是否可用，因为有的浏览器不支持该属性
 export const hasProto = '__proto__' in {}
 
 // Browser environment sniffing

@@ -52,7 +52,7 @@ export class Observer {
       } else {
         copyAugment(value, arrayMethods, arrayKeys) // 否则遍历赋值上数组的方法
       }
-      this.observeArray(value) // 观察数组的每一项即观察数组项列表
+      this.observeArray(value) // 观察数组的每一项即观察数组项列表 将数组中的所有元素都转化为可被侦测的响应式
     } else {
       this.walk(value) // 否则仅当值类型为Object时，遍历所有属性设置为带getter/setters的响应式属性defineReactive
     }
@@ -115,6 +115,7 @@ function copyAugment (target: Object, src: Object, keys: Array<string>) {
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
  * 尝试为某个值value创建观察者实例，如果观察成功返回新的观察者；如果这个值已有一个观察者实例则返回现有的观察者
+ * 尝试为value创建一个Observer实例，如果创建成功，直接返回新的Observe实例。如果value已经存在一个Observe实例，则直接返回它。
  */
 export function observe (value: any, asRootData: ?boolean): Observer | void {
   if (!isObject(value) || value instanceof VNode) {
@@ -203,8 +204,8 @@ export function defineReactive (
 }
 
 /**
- * Set a property on an object. Adds the new property and
- * triggers change notification if the property doesn't
+ * Set a property on an object. Adds the new property and    设置对象的属性
+ * triggers change notification if the property doesn't      添加新属性并在该属性不存在时触发更改通知
  * already exist.
  */
 export function set (target: Array<any> | Object, key: any, val: any): any {

@@ -8,6 +8,17 @@
  *
  * Not type-checking this because this file is perf-critical and the cost
  * of making flow understand it is not worth it.
+ *
+ *  在Vue中，把DOM-Diff过程叫做patch过程。patch意为“补丁”，即指对旧的VNode的修补，打补丁从而得到新的VNode。
+ *  要以生成的新的VNode为基准，对比旧的oldVnode: 如果新的VNode上有的节点而旧的oldNode上没有，那么就在旧的oldVNode上加上去；
+ *  如果新的VNode上没有的节点而旧的oldVNode上有，那么就在旧的oldVNode上去掉；如果某些节点在新的VNode和旧的VNode上都有，那么就以新的VNode为准，更新旧的oldVNode，从而让新旧VNode相同。
+ *
+ *  总之：以新的VNode为基准，改造旧的oldVNode使之成为跟新的VNode一样，这就是patch过程要干的事。
+ *
+ *  整个pctch过程干的三件事情如下：
+ *  ·创建节点：新的VNode中有而旧的oldVNode没有，就在旧的oldVNode中创建
+ *  ·删除节点：新的VNode中没有而旧的oldVNode中有，就从旧的oldVNode中删除
+ *  ·更新节点：新的VNode和旧的oldVNode都有，就以新的VNode为准，更新旧的oldVNode
  */
 
 import VNode, { cloneVNode } from './vnode'
@@ -71,7 +82,7 @@ export function createPatchFunction (backend) {
   let i, j
   const cbs = {}
 
-  const { modules, nodeOps } = backend
+  const { modules, nodeOps } = backend  // 代码中的nodeOps是Vue为了跨平台兼容性，对所有节点操作进行了封装，例如nodeOps.createTextNode()在浏览器端等同于document.createTextNode()
 
   for (i = 0; i < hooks.length; ++i) {
     cbs[hooks[i]] = []
@@ -97,10 +108,10 @@ export function createPatchFunction (backend) {
   }
 
   function removeNode (el) {
-    const parent = nodeOps.parentNode(el)
-    // element may have already been removed due to v-html / v-text
+    const parent = nodeOps.parentNode(el)  // 获取父节点
+    // element may have already been removed due to v-html / v-text 元素可能已经被v-html/v-text删除
     if (isDef(parent)) {
-      nodeOps.removeChild(parent, el)
+      nodeOps.removeChild(parent, el) // 调用父节点的removeChild方法
     }
   }
 
@@ -132,15 +143,15 @@ export function createPatchFunction (backend) {
     index
   ) {
     if (isDef(vnode.elm) && isDef(ownerArray)) {
-      // This vnode was used in a previous render!
-      // now it's used as a new node, overwriting its elm would cause
-      // potential patch errors down the road when it's used as an insertion
+      // This vnode was used in a previous render!  此vnode已在以前的渲染中使用
+      // now it's used as a new node, overwriting its elm would cause     现在它被用作新节点，当它被用作插入引用节点时，覆盖它的elm将导致潜在的修补程序错误。
+      // potential patch errors down the road when it's used as an insertion    相反，我们在为节点创建关联的DOM元素之前按需克隆节点
       // reference node. Instead, we clone the node on-demand before creating
       // associated DOM element for it.
       vnode = ownerArray[index] = cloneVNode(vnode)
     }
 
-    vnode.isRootInsert = !nested // for transition enter check
+    vnode.isRootInsert = !nested // for transition enter check 对于转换，输入check
     if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
       return
     }
@@ -165,13 +176,13 @@ export function createPatchFunction (backend) {
 
       vnode.elm = vnode.ns
         ? nodeOps.createElementNS(vnode.ns, tag)
-        : nodeOps.createElement(tag, vnode)
+        : nodeOps.createElement(tag, vnode)  // 创建元素节点
       setScope(vnode)
 
-      /* istanbul ignore if */
+      /* istanbul ignore if */ // 伊斯坦布尔 忽略if
       if (__WEEX__) {
-        // in Weex, the default insertion order is parent-first.
-        // List items can be optimized to use children-first insertion
+        // in Weex, the default insertion order is parent-first.    在Weex中，默认的插入顺序是父级优先
+        // List items can be optimized to use children-first insertion    可以使用append='tree'对列表项进行优化，以使用子项优先插入
         // with append="tree".
         const appendAsTree = isDef(data) && isTrue(data.appendAsTree)
         if (!appendAsTree) {
@@ -180,12 +191,12 @@ export function createPatchFunction (backend) {
           }
           insert(parentElm, vnode.elm, refElm)
         }
-        createChildren(vnode, children, insertedVnodeQueue)
+        createChildren(vnode, children, insertedVnodeQueue) // 创建元素节点的子节点
         if (appendAsTree) {
           if (isDef(data)) {
             invokeCreateHooks(vnode, insertedVnodeQueue)
           }
-          insert(parentElm, vnode.elm, refElm)
+          insert(parentElm, vnode.elm, refElm)  // 插入到DOM中
         }
       } else {
         createChildren(vnode, children, insertedVnodeQueue)
@@ -199,13 +210,22 @@ export function createPatchFunction (backend) {
         creatingElmInVPre--
       }
     } else if (isTrue(vnode.isComment)) {
-      vnode.elm = nodeOps.createComment(vnode.text)
-      insert(parentElm, vnode.elm, refElm)
+      vnode.elm = nodeOps.createComment(vnode.text) // 创建注释节点
+      insert(parentElm, vnode.elm, refElm)  // 插入到DOM中
     } else {
-      vnode.elm = nodeOps.createTextNode(vnode.text)
-      insert(parentElm, vnode.elm, refElm)
+      vnode.elm = nodeOps.createTextNode(vnode.text) // 创建文本节点
+      insert(parentElm, vnode.elm, refElm)  // 插入到DOM中
     }
   }
+  /**
+   * ·判断是否为元素节点只需要判断该Node节点是否有tag标签即可。如果有tag属性即认为是元素节点，则调用createElement方法创建元素节点，通常元素节点还会有子节点，
+   *  那就递归遍历创建所有子节点，将所有子节点创建好之后insert插入到当前元素节点里面，最后把当前元素节点插入到DOM中。
+   * ·判断是够味注释节点只需要判断VNode的isComment属性是否为true即可，若为true则注释节点，则调用creatComment方法创建注释节点，再插入到DOM中。
+   * ·如果既不是元素节点也不是注释节点，那就认为是文本节点，则调用createTextNode方法创建文本节点，再插入到DOM中。
+   *
+   * 流程入下：
+   * 创建节点 if(VNode是元素节点){ 创建元素节点 }else{ if(VNode是注释节点){ 创建注释节点 }else{ 创建文本节点 } }   插入到DOM中
+   */
 
   function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
     let i = vnode.data
@@ -301,11 +321,12 @@ export function createPatchFunction (backend) {
     return isDef(vnode.tag)
   }
 
+  // 调用创建钩子
   function invokeCreateHooks (vnode, insertedVnodeQueue) {
     for (let i = 0; i < cbs.create.length; ++i) {
       cbs.create[i](emptyNode, vnode)
     }
-    i = vnode.data.hook // Reuse variable
+    i = vnode.data.hook // Reuse variable 重用变量
     if (isDef(i)) {
       if (isDef(i.create)) i.create(emptyNode, vnode)
       if (isDef(i.insert)) insertedVnodeQueue.push(vnode)
@@ -358,15 +379,18 @@ export function createPatchFunction (backend) {
     }
   }
 
+  /**
+   * 删除节点
+   */
   function removeVnodes (vnodes, startIdx, endIdx) {
     for (; startIdx <= endIdx; ++startIdx) {
-      const ch = vnodes[startIdx]
+      const ch = vnodes[startIdx]  // 获取节点
       if (isDef(ch)) {
-        if (isDef(ch.tag)) {
-          removeAndInvokeRemoveHook(ch)
+        if (isDef(ch.tag)) { // 元素节点
+          removeAndInvokeRemoveHook(ch) // 调用节点的removeAndInvokeRemoveHook方法
           invokeDestroyHook(ch)
-        } else { // Text node
-          removeNode(ch.elm)
+        } else { // Text node  文本节点
+          removeNode(ch.elm) // 移除节点
         }
       }
     }
@@ -377,14 +401,14 @@ export function createPatchFunction (backend) {
       let i
       const listeners = cbs.remove.length + 1
       if (isDef(rm)) {
-        // we have a recursively passed down rm callback
+        // we have a recursively passed down rm callback  我们有一个递归传递的rm回调函数，用于增加侦听器计数
         // increase the listeners count
         rm.listeners += listeners
       } else {
-        // directly removing
+        // directly removing  直接移除
         rm = createRmCb(vnode.elm, listeners)
       }
-      // recursively invoke hooks on child component root node
+      // recursively invoke hooks on child component root node 递归调用子组件根节点上的钩子
       if (isDef(i = vnode.componentInstance) && isDef(i = i._vnode) && isDef(i.data)) {
         removeAndInvokeRemoveHook(i, rm)
       }
@@ -401,6 +425,10 @@ export function createPatchFunction (backend) {
     }
   }
 
+  /**
+   * 更新子节点
+   *
+   */
   function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
     let oldStartIdx = 0
     let newStartIdx = 0
@@ -498,6 +526,27 @@ export function createPatchFunction (backend) {
     }
   }
 
+  /**
+   * 更新节点 就是当某些节点在新的VNode和旧的VNode中都有时，我们就需要细致对比一下，找出不一样的地方进行更新
+   * <p>我是不会变化的文字</p>
+   * 以上节点只包含了纯文字，没有任何可变的变量，这也就是说，不管数据再怎么变化，只要这个节点第一次渲染了，那么它以后就永远不会发生变化，这是因为它不包含任何变量，
+   * 所以数据发生任何变化都与它无关。我们把这种节点称之为静态节点
+   * 更新节点的时候需要对以下三种情况进行判断并分别处理：
+   * 1.如果VNode和oldVNode均为静态节点
+   *   我们说了，静态节点数据无论发生任何变化都与它无关，所以都为静态节点的话则直接跳过，无需处理
+   * 2.如果VNode是文本节点
+   *   如果VNode是文本节点，即表示这个节点内只包含纯文本，那么只需要看oldVNode是否也是文本节点，如果是，那就比较两个文本是否不同，
+   *   如果不同则把oldVNode里的文本该成和VNode的文本一样。如果oldVNode不是文本节点，那么不论它是什么，直接调用setText方法把它改成文本节点，并且文本内容根VNode相同。
+   * 3.如果VNode是元素节点 则又细分以下两种情况：
+   *   该节点包含子节点：
+   *     如果新的节点内包含了子节点，那么此时要看旧的节点是否包含子节点，如果旧的节点里也包含了子节点，那就需要递归对比更新子节点；
+   *     如果旧的节点里不包含子节点，那么这个旧节点有可能是空节点或是文本节点，
+   *     如果旧的节点是空节点就把新的节点里的子节点创建一份然后插入到旧的节点里面，如果旧的节点是文本节点，则把文本清空，然后把新的节点里的子节点创建一份谈后插入到旧的节点里面
+   *   该节点不包含子节点：
+   *     如果该节点不包含子节点，同时它又不是文本节点，那就说明该节点是个空节点，那就好办了，不管旧节点之前里面都有啥，直接清空即可
+   *
+   * 处理完以上3种情况，更新节点就算基本完成了。
+   * */
   function patchVnode (
     oldVnode,
     vnode,
@@ -507,11 +556,11 @@ export function createPatchFunction (backend) {
     removeOnly
   ) {
     if (oldVnode === vnode) {
-      return
+      return // vnode和oldVnode是否完全一样？若是，退出程序
     }
 
     if (isDef(vnode.elm) && isDef(ownerArray)) {
-      // clone reused vnode
+      // clone reused vnode   克隆可复用的vnode
       vnode = ownerArray[index] = cloneVNode(vnode)
     }
 
@@ -523,13 +572,13 @@ export function createPatchFunction (backend) {
       } else {
         vnode.isAsyncPlaceholder = true
       }
-      return
+      return // vnode与oldVnode是否都是静态节点？若是，退出程序
     }
 
-    // reuse element for static trees.
-    // note we only do this if the vnode is cloned -
-    // if the new node is not cloned it means the render functions have been
-    // reset by the hot-reload-api and we need to do a proper re-render.
+    // reuse element for static trees.   重用静态树的元素
+    // note we only do this if the vnode is cloned -          注意，我们仅在克隆vnode时才执行此操作---
+    // if the new node is not cloned it means the render functions have been   如果未克隆新节点，则表示渲染函数已由热更新重新加载api配置
+    // reset by the hot-reload-api and we need to do a proper re-render.     我们需要执行适当的重新渲染。
     if (isTrue(vnode.isStatic) &&
       isTrue(oldVnode.isStatic) &&
       vnode.key === oldVnode.key &&
@@ -551,27 +600,38 @@ export function createPatchFunction (backend) {
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
-    if (isUndef(vnode.text)) {
-      if (isDef(oldCh) && isDef(ch)) {
-        if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly)
-      } else if (isDef(ch)) {
+    if (isUndef(vnode.text)) {  // vnode有text属性？若没有：
+      if (isDef(oldCh) && isDef(ch)) { // vnode的子节点与oldVnode的子节点是否都存在？
+        if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly) // 若都存在，判断子节点是否相同，不同则更新子节点
+      } else if (isDef(ch)) {  // 若只有vnode的子节点存在
         if (process.env.NODE_ENV !== 'production') {
           checkDuplicateKeys(ch)
         }
-        if (isDef(oldVnode.text)) nodeOps.setTextContent(elm, '')
-        addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue)
-      } else if (isDef(oldCh)) {
-        removeVnodes(oldCh, 0, oldCh.length - 1)
-      } else if (isDef(oldVnode.text)) {
-        nodeOps.setTextContent(elm, '')
-      }
-    } else if (oldVnode.text !== vnode.text) {
-      nodeOps.setTextContent(elm, vnode.text)
+        if (isDef(oldVnode.text)) nodeOps.setTextContent(elm, '') // 判断oldVnode是否有文本？若有，则清空DOM中的文本，再把vnode的子节点添加到真实DOM中
+        addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue) // 若没有，则把vnode的子节点添加到真实DOM中
+      } else if (isDef(oldCh)) { // 若只有oldnode的子节点存在
+        removeVnodes(oldCh, 0, oldCh.length - 1) // 清空dom中的子节点
+      } else if (isDef(oldVnode.text)) { // 若vnode和oldnode都没有子节点，但是oldnode中有文本
+        nodeOps.setTextContent(elm, '') // 清空oldnode文本
+      } // 上面两个判断一句话概括就是，如果vnode中既没有text，也没有子节点，那么对应的oldnode中有什么就清空什么
+    } else if (oldVnode.text !== vnode.text) {  // 若有，vnode的text属性与oldVnode的text属性是否相同？
+      nodeOps.setTextContent(elm, vnode.text) // 若不相同，则用vnode的text替换真是DOM的文本
     }
     if (isDef(data)) {
       if (isDef(i = data.hook) && isDef(i = i.postpatch)) i(oldVnode, vnode)
     }
   }
+  /**
+   * 上面代码里的注释写得很清晰了，流程图梳理一下流程是：
+   * 更新节点 if(VNode与oldVNode完全一样){ 退出程序 }
+   *         else if(VNode与oldVNode都是静态节点){ 退出程序 }
+   *         else if(VNode有text属性){ if(VNode与oldVNode的文本不同){用VNode的文本替换真实dom中的内容} }
+   *         else if(VNode与oldVNode都有子节点){ if(VNode与oldVNode的子节点不同){ 更新子节点 }}
+   *         else if(只有VNode有子节点){ if(oldVNode有文本){ 清空DOM中的文本 }else{ 把VNode的子节点添加到DOM中 }}
+   *         else if(只有oldVNode有子节点){ 清空DOM中的文本 }
+   *
+   * 介绍了Vue中DOM-Diff算法：patch过程。这个过程干了三件事： 创建节点 删除节点 更新节点
+  */
 
   function invokeInsertHook (vnode, queue, initial) {
     // delay insert hooks for component root nodes, invoke them after the
@@ -747,7 +807,7 @@ export function createPatchFunction (backend) {
         const oldElm = oldVnode.elm
         const parentElm = nodeOps.parentNode(oldElm)
 
-        // create new node
+        // create new node  创建新节点
         createElm(
           vnode,
           insertedVnodeQueue,
@@ -758,7 +818,7 @@ export function createPatchFunction (backend) {
           nodeOps.nextSibling(oldElm)
         )
 
-        // update parent placeholder node element, recursively
+        // update parent placeholder node element, recursively 递归更新父占位符节点元素
         if (isDef(vnode.parent)) {
           let ancestor = vnode.parent
           const patchable = isPatchable(vnode)
@@ -788,7 +848,7 @@ export function createPatchFunction (backend) {
           }
         }
 
-        // destroy old node
+        // destroy old node  销毁旧节点
         if (isDef(parentElm)) {
           removeVnodes([oldVnode], 0, 0)
         } else if (isDef(oldVnode.tag)) {
