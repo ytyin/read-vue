@@ -74,7 +74,7 @@ export function createASTElement (
 }
 
 /**
- * Convert HTML string to AST.
+ * Convert HTML string to AST. 将HTML字符串转换为AST
  */
 export function parse (
   template: string,
@@ -119,9 +119,9 @@ export function parse (
     if (!inVPre && !element.processed) {
       element = processElement(element, options)
     }
-    // tree management
+    // tree management 树管理
     if (!stack.length && element !== root) {
-      // allow root elements with v-if, v-else-if and v-else
+      // allow root elements with v-if, v-else-if and v-else 允许根元素带有 v-if,v-else-if和v-else
       if (root.if && (element.elseif || element.else)) {
         if (process.env.NODE_ENV !== 'production') {
           checkRootConstraints(element)
@@ -144,8 +144,8 @@ export function parse (
         processIfConditions(element, currentParent)
       } else {
         if (element.slotScope) {
-          // scoped slot
-          // keep it in the children list so that v-else(-if) conditions can
+          // scoped slot  作用域插槽
+          // keep it in the children list so that v-else(-if) conditions can 将它保存在子节点列表中，以便v-else(-if)条件可以将其前v节点找到
           // find it as the prev node.
           const name = element.slotTarget || '"default"'
           ;(currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element
@@ -155,27 +155,27 @@ export function parse (
       }
     }
 
-    // final children cleanup
-    // filter out scoped slots
+    // final children cleanup 最后的子节点清理
+    // filter out scoped slots 过滤出限定范围的槽
     element.children = element.children.filter(c => !(c: any).slotScope)
-    // remove trailing whitespace node again
+    // remove trailing whitespace node again 再次删除尾随空格节点
     trimEndingWhitespace(element)
 
-    // check pre state
+    // check pre state 检查之前的状态
     if (element.pre) {
       inVPre = false
     }
     if (platformIsPreTag(element.tag)) {
       inPre = false
     }
-    // apply post-transforms
+    // apply post-transforms 应用转化后
     for (let i = 0; i < postTransforms.length; i++) {
       postTransforms[i](element, options)
     }
   }
 
   function trimEndingWhitespace (el) {
-    // remove trailing whitespace node
+    // remove trailing whitespace node 删除尾随空格节点
     if (!inPre) {
       let lastNode
       while (
@@ -205,6 +205,15 @@ export function parse (
     }
   }
 
+  /**
+   * HTML解析器
+   * 主要负责解析出模板字符串中有哪些内容，然后根据不同的内容才能调用其他解析器以及做相应的处理。
+   * HTML解析器就是parseHTML函数，在模板解析主线程函数parse中调用了该函数，并传入两个参数： template 待转换的模板字符串  options 转换时所需的选项
+   * 还定义了四个钩子函数： start end chars comment 它们就是用来当字符串中不同的内容出来之后，钩子函数把提取出来的内容生成对应的AST
+   * 一边解析不同的内容一遍调用对应的钩子函数生成对应的AST节点，最终完成将整个模板字符串转化成AST,这就是HTML解析器所要做的工作。
+   *
+   *   如何解析不同的内容？ 参见 ./html-parse.js
+  */
   parseHTML(template, {
     warn,
     expectHTML: options.expectHTML,
@@ -214,12 +223,14 @@ export function parse (
     shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
     shouldKeepComment: options.comments,
     outputSourceRange: options.outputSourceRange,
+    // 当解析到开始标签时，调用该函数
+    // start函数接收三个参数，分别是标签名tag、标签属性attrs、标签书否自闭合unary。当调用该钩子函数是哪部回调用createASTElement函数来创建元素类型的AST节点
     start (tag, attrs, unary, start, end) {
-      // check namespace.
-      // inherit parent ns if there is one
+      // check namespace. 检查命名空间
+      // inherit parent ns if there is one 如果有父类ns,则继承父类ns
       const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
 
-      // handle IE svg bug
+      // handle IE svg bug 处理IE svg bug
       /* istanbul ignore if */
       if (isIE && ns === 'svg') {
         attrs = guardIESVGBug(attrs)
@@ -263,7 +274,7 @@ export function parse (
         )
       }
 
-      // apply pre-transforms
+      // apply pre-transforms 应用pre-transforms
       for (let i = 0; i < preTransforms.length; i++) {
         element = preTransforms[i](element, options) || element
       }
@@ -300,10 +311,10 @@ export function parse (
         closeElement(element)
       }
     },
-
+    // 当解析到结束标签时，调用该函数
     end (tag, start, end) {
       const element = stack[stack.length - 1]
-      // pop stack
+      // pop stack 弹出堆栈
       stack.length -= 1
       currentParent = stack[stack.length - 1]
       if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
@@ -311,7 +322,7 @@ export function parse (
       }
       closeElement(element)
     },
-
+    // 当解析到文本时，调用该函数 调用chars函数生成文本类型的AST节点
     chars (text: string, start: number, end: number) {
       if (!currentParent) {
         if (process.env.NODE_ENV !== 'production') {
@@ -329,7 +340,7 @@ export function parse (
         }
         return
       }
-      // IE textarea placeholder bug
+      // IE textarea placeholder bug  IE文本区域占位符错误
       /* istanbul ignore if */
       if (isIE &&
         currentParent.tag === 'textarea' &&
@@ -341,12 +352,12 @@ export function parse (
       if (inPre || text.trim()) {
         text = isTextTag(currentParent) ? text : decodeHTMLCached(text)
       } else if (!children.length) {
-        // remove the whitespace-only node right after an opening tag
+        // remove the whitespace-only node right after an opening tag 删除开始标记之后的空格节点
         text = ''
       } else if (whitespaceOption) {
         if (whitespaceOption === 'condense') {
-          // in condense mode, remove the whitespace node if it contains
-          // line break, otherwise condense to a single space
+          // in condense mode, remove the whitespace node if it contains   在压缩模式下,如果空格节点包含换行符，则删除空格节点，
+          // line break, otherwise condense to a single space              否则压缩为单个空格
           text = lineBreakRE.test(text) ? '' : ' '
         } else {
           text = ' '
@@ -356,19 +367,19 @@ export function parse (
       }
       if (text) {
         if (!inPre && whitespaceOption === 'condense') {
-          // condense consecutive whitespaces into single space
+          // condense consecutive whitespaces into single space 将连续的空格压缩成单个空格
           text = text.replace(whitespaceRE, ' ')
         }
         let res
         let child: ?ASTNode
-        if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
+        if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) { // 如果是动态文本，则创建动态文本类型的AST节点
           child = {
             type: 2,
             expression: res.expression,
             tokens: res.tokens,
             text
           }
-        } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+        } else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') { // 如果不是动态文本，则创建纯静态文本类型的AST节点
           child = {
             type: 3,
             text
@@ -383,8 +394,9 @@ export function parse (
         }
       }
     },
+    // 当解析到注释时，调用该函数 生成注释类型的AST节点
     comment (text: string, start, end) {
-      // adding anything as a sibling to the root node is forbidden
+      // adding anything as a sibling to the root node is forbidden 禁止将任何东西作为兄弟节点添加到根节点，注释仍然是允许的，但可以忽略
       // comments should still be allowed, but ignored
       if (currentParent) {
         const child: ASTText = {
@@ -402,6 +414,10 @@ export function parse (
   })
   return root
 }
+/**
+ * 从上面的代码中可以看到，parse函数就是解析器的主函数，在parse函数内调用了parseHTML函数对字符串进行解析，在parseHTML函数解析模板字符串的过程中，如果遇到文本信息，
+ * 就会调用文本解析器parseText函数进行文本解析；如果文本中包含过滤器，就会调用过滤器解析器parseFilter函数进行解析。
+ */
 
 function processPre (el) {
   if (getAndRemoveAttr(el, 'v-pre') != null) {
@@ -977,3 +993,23 @@ function checkForAliasModel (el, value) {
     _el = _el.parent
   }
 }
+
+/**
+ * 解析器，顾名思义，就是把用户所写的模板根据一定的解析规则解析出有效的信息，最后用这些信息形成AST.我们知道在<template></template>模板内，除了有常规的HTML标签外，
+ * 用户还会一些文本信息以及在文本信息中包含过滤器。而这些不同的内容在解析起来肯定需要不同的解析规则，所以解析器不可能只有一个，它应该除了有解析常规HTML的HTML解析器，
+ * 还应该有解析文本的文本解析器以及解析文本中如果包含过滤器的过滤器解析器。
+ * 另外，文本信息和标签属性信息却又是存在于HTML之内的，所以在解析整个模板的时候它的流程应该是这样子的：HTML解析器是主线，先用HTML解析器进行解析整个模板，在解析过程中如果碰到文本内容，
+ * 那就调用文本解析起来解析文本，如果碰到文本中包含过滤器那就调用过滤器解析器来解析。如下图所示：
+ * 解析阶段主线函数
+ *
+ * parse
+ *                     ----------- parseText
+ *                    |
+ *                    |
+ * parseHTML <--------
+ *                    |
+ *                    |
+ *                     ----------- parseFilters
+ *
+ *
+ */
